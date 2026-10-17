@@ -17,6 +17,14 @@ log()  { printf '\033[1;36m▸ %s\033[0m\n' "$*"; }
 ok()   { printf '\033[1;32m✔ %s\033[0m\n' "$*"; }
 warn() { printf '\033[1;33m! %s\033[0m\n' "$*"; }
 
+# ---------------------------------------------------------- service worker bump --
+# Cache-first clients only refresh when the cache name changes, so stamp it on deploy.
+if [ -f sw.js ] && grep -q "const CACHE = 'vibehop-v" sw.js; then
+  STAMP="$(date +%Y%m%d%H%M%S)"
+  sed -i "s/const CACHE = 'vibehop-v[0-9]*'/const CACHE = 'vibehop-v$STAMP'/" sw.js
+  ok "Service worker cache stamped: vibehop-v$STAMP"
+fi
+
 # ---------------------------------------------------------------- preflight --
 command -v git   >/dev/null || { echo "git is required";   exit 1; }
 command -v gh    >/dev/null || { echo "GitHub CLI is required: https://cli.github.com/"; exit 1; }

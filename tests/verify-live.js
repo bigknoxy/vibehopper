@@ -62,7 +62,7 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
     }
     return { scope: reg.scope, active: !!reg.active, state: reg.active && reg.active.state, controller: !!navigator.serviceWorker.controller, names, entries };
   });
-  results.D3_service_worker = { ...sw, pass: sw.active && sw.state === 'activated' && sw.entries.length >= 3 && sw.names.includes('vibehop-v2') };
+  results.D3_service_worker = { ...sw, pass: sw.active && sw.state === 'activated' && sw.entries.length >= 3 && sw.names.includes('vibehop-v3') };
 
   // ---- D4: gameplay — start, audio unlocks on tap ----
   await page.click('#btnStart');

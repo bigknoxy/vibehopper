@@ -6,6 +6,10 @@
     "smoke": "node smoke.js",
     "verify": "node verify.js",
     "verify:live": "node verify-live.js",
+    "features": "node features.js",
+    "falsify": "node falsifiers.js",
+    "regress": "node regress.js",
+    "shots": "node shots.js",
     "crops": "node crops.js"
   },
   "dependencies": {
