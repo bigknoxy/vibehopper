@@ -51,15 +51,16 @@ ok "Code pushed to https://github.com/$OWNER/$REPO_NAME"
 
 # ------------------------------------------------------------ enable gh-pages --
 log "Enabling GitHub Pages (branch: main, path: /)"
+read -r -d '' PAGES_BODY <<'JSON' || true
+{"source":{"branch":"main","path":"/"}}
+JSON
 if gh api "/repos/$OWNER/$REPO_NAME/pages" >/dev/null 2>&1; then
   warn "Pages already enabled — updating source"
-  gh api --method PUT -H "Accept: application/vnd.github+json" \
-    "/repos/$OWNER/$REPO_NAME/pages" \
-    -f source='{"branch":"main","path":"/"}' >/dev/null || true
+  printf '%s' "$PAGES_BODY" | gh api --method PUT -H "Accept: application/vnd.github+json" \
+    "/repos/$OWNER/$REPO_NAME/pages" --input - >/dev/null
 else
-  gh api --method POST -H "Accept: application/vnd.github+json" \
-    "/repos/$OWNER/$REPO_NAME/pages" \
-    -f source='{"branch":"main","path":"/"}' >/dev/null
+  printf '%s' "$PAGES_BODY" | gh api --method POST -H "Accept: application/vnd.github+json" \
+    "/repos/$OWNER/$REPO_NAME/pages" --input - >/dev/null
 fi
 LIVE_URL="https://$OWNER.github.io/$REPO_NAME/"
 ok "Live URL: $LIVE_URL"
