@@ -34,11 +34,17 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
     c.width = W; c.height = H;
     const x = c.getContext('2d');
 
-    // background: the frame itself, blurred by scaling it up huge and dimming it
-    x.fillStyle = '#0d0e1e'; x.fillRect(0, 0, W, H);
-    x.globalAlpha = 0.5;
-    x.drawImage(img, 0, 0, img.width, img.height, 0, -H * 0.35, H * 1.15, H * 2.0);
-    x.globalAlpha = 1;
+    // background: deep brand wash + two soft glows (a blurred game frame read as smudge)
+    const bgw = x.createLinearGradient(0, 0, W, H);
+    bgw.addColorStop(0, '#090a16'); bgw.addColorStop(0.55, '#0d0e1e'); bgw.addColorStop(1, '#151834');
+    x.fillStyle = bgw; x.fillRect(0, 0, W, H);
+    const softGlow = (gx, gy, rad, col) => {
+      const g = x.createRadialGradient(gx, gy, 0, gx, gy, rad);
+      g.addColorStop(0, col); g.addColorStop(1, 'rgba(0,0,0,0)');
+      x.fillStyle = g; x.fillRect(0, 0, W, H);
+    };
+    softGlow(980, 110, 540, 'rgba(78,240,208,0.10)');
+    softGlow(1140, 570, 430, 'rgba(255,83,118,0.075)');
     // left-to-right scrim so the right half is always readable
     const sc = x.createLinearGradient(0, 0, W, 0);
     sc.addColorStop(0, 'rgba(13,14,30,0.55)');

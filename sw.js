@@ -1,7 +1,7 @@
 /* VibeHop service worker — offline-ready.
    Navigations are network-first (a deployed update shows up on the next online load),
    assets are cache-first with an opportunistic top-up. deploy.sh bumps CACHE. */
-const CACHE = 'vibehop-v5';
+const CACHE = 'vibehop-v6';
 const ASSETS = ['./', './index.html', './manifest.json', './docs/icon-180.png', './docs/icon-192.png', './docs/icon-512.png', './docs/icon-maskable-512.png'];
 
 self.addEventListener('install', (event) => {

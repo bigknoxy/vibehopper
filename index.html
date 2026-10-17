@@ -137,7 +137,8 @@
     bottom:calc(72px + env(safe-area-inset-bottom)); z-index:31;
     background:rgba(13,14,30,.94); border:1px solid rgba(255,209,102,.55);
     color:var(--amber); font-size:14px; font-weight:700; padding:10px 18px;
-    border-radius:999px; opacity:0; pointer-events:none; transition:opacity .18s ease;
+    border-radius:999px; opacity:0; pointer-events:none;
+    width:max-content; max-width:92vw; text-align:center;
   }
   #toast.show{opacity:1;}
 </style>
@@ -221,6 +222,18 @@ function resize(){
   groundY=Math.round(H*0.78);
   getSafeTop.v=undefined;                 // the inset is orientation-dependent
   if(G.mode!=='play') P.y=groundY-P.h;    // keep the idle runner on the new floor line
+  // on wide screens the field is a centred card — keep the corner chrome inside it
+  const host=document.getElementById('controls'), tt=document.getElementById('toast');
+  const framed=document.body.classList.contains('fld');
+  if(framed){
+    const r=cv.getBoundingClientRect();
+    const rGap=Math.max(8,Math.round(innerWidth-r.right)+14);
+    const bGap=Math.max(8,Math.round(innerHeight-r.bottom)+14);
+    host.style.right=rGap+'px'; host.style.bottom=bGap+'px';
+    tt.style.bottom=(bGap+52)+'px'; tt.style.maxWidth=Math.max(200,Math.round(r.width)-40)+'px';
+  } else {
+    host.style.right=''; host.style.bottom=''; tt.style.bottom=''; tt.style.maxWidth='';
+  }
 }
 addEventListener('resize',resize,{passive:true});
 addEventListener('orientationchange',()=>setTimeout(resize,120),{passive:true});
@@ -437,12 +450,12 @@ const PLAYER_X=0.24;         // resting x as a fraction of the viewport
 const DASH_VX=260, DASH_TIME=0.22, DASH_CD=0.35, RING_TAP_R=1.55;
 const SPEED_START=300, SPEED_GROW=7.5, SPEED_CURVE=0.035, SPEED_MAX=900;
 const SCORE_RATE=0.045, TRAIL_MAX=12, TRAIL_DT=0.022;
-const PARTS_MAX=260, MOTES=42;
+const PARTS_MAX=260, MOTES=64;
 
 /* ---------- world ---------- */
 const world={
   obstacles:[], orbs:[], rings:[], parts:[], motes:[],
-  pillars:[], mtnsTop:[], mtnsBack:[],
+  pillars:[], mtnsTop:[], mtnsBack:[], city:[],
   spawnGap:0, orbCd:1.2, ringCd:2.6
 };
 function makeMote(){
@@ -456,7 +469,15 @@ function initWorld(){
   // mountain silhouette layers (procedural, recycled)
   let x=0; while(x<W*2){ world.mtnsTop.push({x:x,h:rnd(60,190),w:rnd(120,260)}); x+=rnd(90,190); }
   x=0; world.mtnsBack.length=0; while(x<W*2){ world.mtnsBack.push({x:x,h:rnd(30,120),w:rnd(140,300)}); x+=rnd(100,220); }
-  x=W+120; while(x<W*3){ world.pillars.push({x:x,h:rnd(120,300),w:rnd(26,54),ph:rnd(0,TAU)}); x+=rnd(180,340); }
+  // night city on the horizon — fills the empty mid-band with something to look at
+  world.city.length=0;
+  x=-40; while(x<W*2+140){
+    const bw=rnd(30,72), bh=rnd(18,72), win=[];
+    for(let i=0;i<3;i++) if(Math.random()<0.75) win.push({dx:rnd(5,Math.max(6,bw-10)),dy:rnd(6,Math.max(7,bh-10)),w:3,h:4});
+    world.city.push({x:x,w:bw,h:bh,win:win});
+    x+=bw+rnd(5,24);
+  }
+  x=W+120; while(x<W*3){ world.pillars.push({x:x,h:rnd(120,230),w:rnd(26,46),ph:rnd(0,TAU)}); x+=rnd(180,340); }
 }
 function spawnObstacle(){
   const isSpike=Math.random()<0.45;
@@ -595,7 +616,7 @@ function hop(){
 function triggerDash(r){
   r.dead=true;
   G.ringsHit++;
-  if(G.dashTut){ G.dashTut=false; try{ localStorage.setItem('vibehop_dash_tut','done'); }catch(e){} toast('★ dash! +15 — you keep your speed'); }
+  if(G.dashTut){ G.dashTut=false; try{ localStorage.setItem('vibehop_dash_tut','done'); }catch(e){} toast('★ DASH +15 · speed kept'); }
   G.dashCd=DASH_CD;
   P.dashActive=DASH_TIME;
   P.vy=Math.min(P.vy,-380);
@@ -678,11 +699,15 @@ function update(dt){
   world.motes.forEach(m=>{ m.x-=(m.sp+spd*0.05)*dt; if(m.x<-8){ Object.assign(m,makeMote()); m.x=W+8; } });
   world.pillars.forEach(p=>{ p.x-=spd*0.34*dt; });
   while(world.pillars.length&&world.pillars[0].x<-90) world.pillars.shift();
-  while(world.pillars.length<8){ const lastp=world.pillars[world.pillars.length-1]; const nx=(lastp?lastp.x:W)+rnd(180,340); world.pillars.push({x:nx,h:rnd(120,300),w:rnd(26,54),ph:rnd(0,TAU)}); }
+  while(world.pillars.length<8){ const lastp=world.pillars[world.pillars.length-1]; const nx=(lastp?lastp.x:W)+rnd(180,340); world.pillars.push({x:nx,h:rnd(120,230),w:rnd(26,46),ph:rnd(0,TAU)}); }
   world.mtnsTop.forEach(m=>{ m.x-=spd*0.11*dt; });
   world.mtnsBack.forEach(m=>{ m.x-=spd*0.055*dt; });
   world.mtnsTop.forEach(m=>{ if(m.x+m.w<-40) m.x+=W*2; });
   world.mtnsBack.forEach(m=>{ if(m.x+m.w<-40) m.x+=W*2; });
+  // city drifts between the far ridges and the pillars; recycled onto the right edge
+  let cityRight=-40;
+  world.city.forEach(b=>{ b.x-=spd*0.16*dt; if(b.x+b.w>cityRight) cityRight=b.x+b.w; });
+  world.city.forEach(b=>{ if(b.x+b.w<-60){ b.x=cityRight+rnd(5,24); cityRight=b.x+b.w; } });
 
   // ---- spawning ----
   world.spawnGap-=spd*dt;
@@ -828,41 +853,90 @@ function glowStrip(hex){
   STRIP_S[hex]=c; return c;
 }
 
+let ridgeG=null,ridgeGY=0;
 function drawBackground(now){
-  // base wash + glow sun are baked once per size (see bakeStatic in render)
-  // layer 1: distant mountains
-  ctx.fillStyle=PAL.deep;
-  ctx.beginPath(); ctx.moveTo(0,groundY+10);
+  // base wash + glow sun + horizon haze are baked once per size (see bakeStatic in render)
+  const base=groundY+12;
+  if(!ridgeG||ridgeGY!==groundY){
+    ridgeGY=groundY;
+    const mk=(top,bottom,y0)=>{ const g=ctx.createLinearGradient(0,y0,0,base); g.addColorStop(0,top); g.addColorStop(1,bottom); return g; };
+    ridgeG={ back:mk('#16203f','#0a0e22',groundY-190), near:mk('#1e2a58','#0f1430',groundY-270) };
+    const vg=ctx.createLinearGradient(0,groundY-150,0,groundY+6);
+    vg.addColorStop(0,'rgba(13,14,30,0)');
+    vg.addColorStop(1,'rgba(13,14,30,0.48)');
+    ridgeG.veil=vg;
+  }
+  // layer 1: far ridge — low rounded silhouettes with a light-catching crest
+  ctx.fillStyle=ridgeG.back;
+  ctx.beginPath();
   world.mtnsBack.forEach(m=>{
-    ctx.lineTo(m.x,groundY-m.h); ctx.lineTo(m.x+m.w*0.5,groundY-m.h*0.35); ctx.lineTo(m.x+m.w,groundY+10);
+    ctx.moveTo(m.x,base);
+    ctx.quadraticCurveTo(m.x+m.w*0.5,base-m.h*1.35,m.x+m.w,base);
+    ctx.closePath();
   });
-  ctx.lineTo(W,groundY+10); ctx.closePath(); ctx.fill();
+  ctx.fill();
+  ctx.strokeStyle='rgba(78,240,208,0.055)'; ctx.lineWidth=1;
+  ctx.beginPath();
+  world.mtnsBack.forEach(m=>{ ctx.moveTo(m.x,base); ctx.quadraticCurveTo(m.x+m.w*0.5,base-m.h*1.35,m.x+m.w,base); });
+  ctx.stroke();
 
-  // layer 2: near mountains with tint
-  ctx.fillStyle=PAL.near;
-  ctx.beginPath(); ctx.moveTo(0,groundY+10);
+  // layer 2: near ridge, taller and warmer so the horizon has depth
+  ctx.fillStyle=ridgeG.near;
+  ctx.beginPath();
   world.mtnsTop.forEach(m=>{
-    ctx.lineTo(m.x,groundY-m.h*1.15); ctx.lineTo(m.x+m.w*0.45,groundY-m.h*0.3); ctx.lineTo(m.x+m.w,groundY+10);
+    ctx.moveTo(m.x,base);
+    ctx.quadraticCurveTo(m.x+m.w*0.5,base-m.h*1.55,m.x+m.w,base);
+    ctx.closePath();
   });
-  ctx.lineTo(W,groundY+10); ctx.closePath(); ctx.fill();
+  ctx.fill();
+  ctx.strokeStyle='rgba(78,240,208,0.09)';
+  ctx.beginPath();
+  world.mtnsTop.forEach(m=>{ ctx.moveTo(m.x,base); ctx.quadraticCurveTo(m.x+m.w*0.5,base-m.h*1.55,m.x+m.w,base); });
+  ctx.stroke();
 
-  // layer 3: glowing pillars (per-pillar gradient cached; pulse rides on globalAlpha)
+  // layer 3: night city skyline with lit windows (two batched paths for the whole row)
+  if(world.city.length){
+    const cbase=groundY+6;
+    ctx.fillStyle='#192253';
+    ctx.beginPath();
+    world.city.forEach(b=>{ ctx.rect(b.x,cbase-b.h,b.w,b.h); });
+    ctx.fill();
+    ctx.fillStyle='rgba(78,240,208,0.26)';
+    ctx.beginPath();
+    world.city.forEach(b=>{ for(let i=0;i<b.win.length;i++){ const wn=b.win[i]; ctx.rect(b.x+wn.dx,cbase-b.h+wn.dy,wn.w,wn.h); } });
+    ctx.fill();
+    ctx.fillStyle='rgba(255,209,102,0.22)';
+    ctx.beginPath();
+    world.city.forEach(b=>{ if(b.win.length){ const wn=b.win[0]; ctx.rect(b.x+wn.dx,cbase-b.h+wn.dy+7,wn.w,wn.h); } });
+    ctx.fill();
+    // atmospheric veil so the skyline melts into the horizon instead of sitting on it
+    ctx.fillStyle=ridgeG.veil;
+    ctx.fillRect(0,groundY-150,W,163);
+  }
+
+  // layer 4: glowing pillars (per-pillar gradient cached; pulse rides on globalAlpha)
   world.pillars.forEach(p=>{
     const pulse=0.6+0.4*Math.sin(now/900+p.ph);
-    if(!p.g){ // unit-space gradient, reused by translating to groundY
+    if(!p.g){ // unit-space gradient, reused by translating to groundY; fades out at the tip
       p.g=ctx.createLinearGradient(0,-p.h,0,0);
-      p.g.addColorStop(0,'rgba(78,240,208,1)');
-      p.g.addColorStop(1,'rgba(78,240,208,0.1)');
+      p.g.addColorStop(0,'rgba(78,240,208,0)');
+      p.g.addColorStop(0.22,'rgba(78,240,208,1)');
+      p.g.addColorStop(1,'rgba(78,240,208,0.14)');
     }
     ctx.save(); ctx.translate(0,groundY);
-    ctx.globalAlpha=0.20*pulse;
+    ctx.globalAlpha=0.09*pulse;
     ctx.fillStyle=p.g;
     ctx.fillRect(p.x,-p.h,p.w,p.h);
-    ctx.globalAlpha=1;
-    ctx.fillStyle='rgba(78,240,208,'+(0.10*pulse)+')';
-    ctx.fillRect(p.x+p.w*0.35-4,-p.h,10,p.h);
-    ctx.fillStyle='rgba(78,240,208,'+(0.45*pulse)+')';
+    ctx.globalAlpha=0.13*pulse;
+    ctx.fillRect(p.x+p.w*0.35-3,-p.h,9,p.h);
+    ctx.globalAlpha=0.5*pulse;
     ctx.fillRect(p.x+p.w*0.35,-p.h,2,p.h);
+    // lit cap so the column reads as a thing, not a stray line
+    ctx.globalAlpha=0.8*pulse;
+    ctx.fillStyle='rgba(78,240,208,1)';
+    ctx.fillRect(p.x+p.w*0.35-5,-p.h+2,12,2);
+    blob(PAL.mint,p.x+p.w*0.5,-p.h+2,20,0.26*pulse);
+    ctx.globalAlpha=1;
     ctx.restore();
   });
 
@@ -897,13 +971,24 @@ function drawGround(now){
   // moving floor grid — one accumulated path per style instead of a stroke per line
   const spd=G.mode==='play'?G.speed:(G.mode==='title'?120:0);
   const off=(now*spd/1000)%64;
-  ctx.strokeStyle='rgba(255,83,118,0.13)'; ctx.lineWidth=2;
+  ctx.strokeStyle='rgba(255,83,118,0.085)'; ctx.lineWidth=1.5;
   ctx.beginPath();
   for(let x=-off;x<W;x+=64){ ctx.moveTo(x,groundY+6); ctx.lineTo(x-38,H); }
   ctx.stroke();
   ctx.strokeStyle='rgba(78,240,208,0.08)';
   ctx.beginPath();
   for(let y=groundY+16;y<H;y+=26){ ctx.moveTo(0,y); ctx.lineTo(W,y); }
+  ctx.stroke();
+  // foreground speed streaks — cheap, and the deck no longer reads as a flat slab
+  ctx.strokeStyle='rgba(78,240,208,0.11)'; ctx.lineWidth=2;
+  ctx.beginPath();
+  const run=(now*spd/1000)%(W+220);
+  const step=Math.max(26,(H-groundY-40)/5);
+  for(let i=0;i<5;i++){
+    const y=groundY+30+i*step;
+    const x=W-(run+i*137)%(W+220);
+    ctx.moveTo(x,y); ctx.lineTo(x+30,y+3);
+  }
   ctx.stroke();
   ctx.restore();
 }
@@ -937,13 +1022,16 @@ function drawOrb(o,now){
   ctx.save();
   ctx.translate(o.x,o.y+bob);
   ctx.rotate(now/900+o.ph);
-  glow(PAL.mint,28);
+  glow(PAL.mint,20);
   ctx.fillStyle=PAL.mint;
   const R=o.r*pulse;
   ctx.beginPath(); ctx.moveTo(0,-R); ctx.lineTo(R*0.86,0); ctx.lineTo(0,R); ctx.lineTo(-R*0.86,0); ctx.closePath(); ctx.fill();
   noGlow();
-  ctx.fillStyle='rgba(255,255,255,0.75)';
-  ctx.beginPath(); ctx.moveTo(0,-R*0.55); ctx.lineTo(R*0.4,0); ctx.lineTo(0,R*0.2); ctx.lineTo(-R*0.4,0); ctx.closePath(); ctx.fill();
+  // cut-gem facets: shaded left half + a hard specular, so it reads as a prism
+  ctx.fillStyle='rgba(6,22,26,0.42)';
+  ctx.beginPath(); ctx.moveTo(0,-R); ctx.lineTo(-R*0.86,0); ctx.lineTo(0,R); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,0.88)';
+  ctx.beginPath(); ctx.moveTo(-R*0.08,-R*0.60); ctx.lineTo(R*0.32,-R*0.14); ctx.lineTo(0,R*0.02); ctx.lineTo(-R*0.36,-R*0.30); ctx.closePath(); ctx.fill();
   ctx.restore();
 }
 
@@ -978,12 +1066,13 @@ function drawRing(r,now){
   }
 }
 
+let bodyShade=null;
 function drawPlayer(now){
   const cx=P.x, cy=P.y-P.h*0.5;
   // trail — comet tail behind the character
   ctx.save();
   P.trail.forEach(t=>{
-    blob(PAL.mint,t.x-t.r*0.5,t.y,t.r*2.4,t.a*0.5);
+    blob(PAL.mint,t.x-t.r*0.4,t.y,t.r*1.7,t.a*0.34);
   });
   ctx.restore();
   // dash trail
@@ -997,62 +1086,68 @@ function drawPlayer(now){
   ctx.translate(cx,cy); ctx.rotate(P.rot);
   ctx.scale(1/Math.max(0.7,P.stretch),P.squash);   // squash & stretch (inverse to keep readable)
   // invulnerability flicker
-  const flick=G.inv>0 && (Math.floor(G.inv*20)%2===0);
-  ctx.globalAlpha=flick?0.45:1;
+  // invulnerability is carried by the pulse ring below; the body stays opaque so the
+  // trail and background never bleed through it
   const shellCol=PAL.mint;
   const rr=Math.min(12,Math.min(P.w,P.h)/2);
-  // solid glow shell — reads clearly against every background layer
-  glow(shellCol,28);
+  // tight neon halo (a wide bloom made the sprite read as a fuzzy blob)
+  glow(shellCol,18);
   ctx.fillStyle=shellCol;
   roundRect(-P.w/2,-P.h/2,P.w,P.h,rr);
   ctx.fill();
   noGlow();
   ctx.fill();                     // double-fill: denser core, softer halo
+  // volume: smooth top-lit capsule (cached gradient — no hard shading arcs)
+  if(!bodyShade){
+    const bg=ctx.createLinearGradient(0,-P.h/2,0,P.h/2);
+    bg.addColorStop(0,'rgba(255,255,255,0.18)');
+    bg.addColorStop(0.42,'rgba(255,255,255,0)');
+    bg.addColorStop(0.66,'rgba(9,12,26,0.04)');
+    bg.addColorStop(1,'rgba(9,12,26,0.20)');
+    bodyShade=bg;
+  }
+  ctx.fillStyle=bodyShade;
+  roundRect(-P.w/2,-P.h/2,P.w,P.h,rr);
+  ctx.fill();
   // dark rim so the hero never dissolves into the mint floor line / pillars behind it
-  ctx.strokeStyle='rgba(13,14,30,0.85)';
+  ctx.strokeStyle='rgba(9,11,24,0.9)';
   ctx.lineWidth=2;
   roundRect(-P.w/2,-P.h/2,P.w,P.h,rr);
   ctx.stroke();
   if(G.inv>0){
-    // invulnerable: pulsing white-mint outline — keeps the body colour readable
-    const pulse=0.55+0.45*Math.sin(G.inv*18);
-    glow(PAL.mint,22);
-    ctx.lineWidth=3; ctx.strokeStyle='rgba(255,255,255,'+(0.35+0.45*pulse).toFixed(3)+')';
-    roundRect(-P.w/2-5,-P.h/2-5,P.w+10,P.h+10,rr+4);
+    // invulnerable: slim mint halo, offset just outside the rim (no white "bubble")
+    const pulse=0.5+0.5*Math.sin(G.inv*18);
+    glow(PAL.mint,18);
+    ctx.lineWidth=2; ctx.strokeStyle='rgba(78,240,208,'+(0.30+0.35*pulse).toFixed(3)+')';
+    roundRect(-P.w/2-3.5,-P.h/2-3.5,P.w+7,P.h+7,rr+3);
     ctx.stroke();
     noGlow();
   }
-  // inner glass (inset, centred) — light tint only, keeps the body solid
-  ctx.fillStyle='rgba(255,255,255,0.26)';
-  roundRect(-P.w/2+4,-P.h/2+5,P.w-8,P.h-10,rr-3);
+  // goggles band + eye in the top third — this is the face
+  const vy=-P.h*0.34, vh=Math.max(12,P.h*0.34);
+  ctx.fillStyle='rgba(11,14,28,0.88)';
+  roundRect(-P.w/2+4,vy,P.w-8,vh,7);
   ctx.fill();
-  // dark visor band — gives the character a face
-  ctx.fillStyle='rgba(13,14,30,0.72)';
-  roundRect(-P.w/2+5,-P.h*0.16,P.w-10,13,6);
+  ctx.fillStyle='rgba(255,255,255,0.12)';
+  roundRect(-P.w/2+5,vy+1.5,P.w-10,1.6,0.8);
   ctx.fill();
-  // glowing eye inside the visor, facing right
-  glow(PAL.mag,14);
+  glow(PAL.mag,12);
   ctx.fillStyle=PAL.mag;
-  ctx.beginPath(); ctx.arc(P.w*0.15,-P.h*0.16+6.5,3.6,0,TAU); ctx.fill();
-  ctx.fillStyle='rgba(255,255,255,0.9)';
-  ctx.beginPath(); ctx.arc(P.w*0.15+1,-P.h*0.16+5,1.3,0,TAU); ctx.fill();
+  ctx.beginPath(); ctx.arc(P.w*0.10,vy+vh*0.55,3.9,0,TAU); ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,0.95)';
+  ctx.beginPath(); ctx.arc(P.w*0.10+1.2,vy+vh*0.55-1.5,1.4,0,TAU); ctx.fill();
   noGlow();
-  // shield pips etched on the shell's left edge (mint, matches the HUD row)
-  for(let i=0;i<G.maxPips;i++){
-    const on=i<G.pips;
-    glow(on?PAL.mint:'transparent',on?9:0);
-    ctx.fillStyle=on?PAL.mint:'rgba(255,255,255,0.28)';
-    ctx.beginPath(); ctx.arc(-P.w*0.30,-P.h*0.30+i*11,2.4,0,TAU); ctx.fill();
-    noGlow();
-  }
+  // little feet, tucked while rising — sells the runner and reads the jump instantly
+  const tuck=clamp(-P.vy/900,0,1)*3.2;
+  ctx.fillStyle='rgba(6,8,18,0.92)';
+  roundRect(-11.5,P.h/2-2.4-tuck,7,5,2.4); ctx.fill();
+  roundRect(4.5,P.h/2-2.4-tuck,7,5,2.4); ctx.fill();
   ctx.restore();
 
-  // landing shadow blob
+  // soft contact shadow (a hard black ellipse read as a hole in the deck)
   ctx.save();
   const h=clamp((groundY-(P.y+P.h*0.5))/300,0,1);
-  ctx.globalAlpha=0.28*(1-h*0.7);
-  ctx.fillStyle='#000';
-  ctx.beginPath(); ctx.ellipse(P.x,groundY+4,P.w*0.62*(1-h*0.5),7*(1-h*0.5),0,0,TAU); ctx.fill();
+  blob('#0a0f24',P.x,groundY+2,P.w*0.62*(1-h*0.42),0.34*(1-h*0.6));
   ctx.restore();
 }
 function roundRect(x,y,w,h,r){
@@ -1172,15 +1267,38 @@ function bakeStatic(){
     const g=b.createLinearGradient(0,0,0,H);
     g.addColorStop(0,'#0a0b18'); g.addColorStop(0.55,PAL.bg); g.addColorStop(1,'#131532');
     b.fillStyle=g; b.fillRect(0,0,W,H);
-    const sx=W*0.72, sy=H*0.30;
+    // horizon haze: separates the sky from the city and warms the lower sky
+    const hz=b.createLinearGradient(0,groundY-170,0,groundY+8);
+    hz.addColorStop(0,'rgba(78,240,208,0)');
+    hz.addColorStop(0.62,'rgba(78,240,208,0.05)');
+    hz.addColorStop(1,'rgba(78,240,208,0.14)');
+    b.fillStyle=hz; b.fillRect(0,groundY-170,W,178);
+    const sx=W*0.72, sy=H*0.28;
     const rg=b.createRadialGradient(sx,sy,10,sx,sy,H*0.42);
-    rg.addColorStop(0,'rgba(78,240,208,0.16)');
-    rg.addColorStop(0.4,'rgba(255,83,118,0.07)');
+    rg.addColorStop(0,'rgba(78,240,208,0.14)');
+    rg.addColorStop(0.4,'rgba(255,83,118,0.06)');
     rg.addColorStop(1,'rgba(0,0,0,0)');
     b.fillStyle=rg; b.fillRect(0,0,W,H);
-    b.globalAlpha=0.5; b.drawImage(glowSprite(PAL.amber),sx-96,sy-96,192,192);
-    b.globalAlpha=0.75; b.fillStyle='#ffd166';
+    b.globalAlpha=0.42; b.drawImage(glowSprite(PAL.amber),sx-104,sy-104,208,208);
+    b.globalAlpha=1;
+    // limb-lit disc instead of a flat sticker — edge feathers into the halo
+    const sg=b.createRadialGradient(sx-8,sy-9,2,sx,sy,34);
+    sg.addColorStop(0,'#fff6d9');
+    sg.addColorStop(0.42,'#ffd97e');
+    sg.addColorStop(0.82,'#ffc257');
+    sg.addColorStop(1,'rgba(255,194,87,0)');
+    b.fillStyle=sg;
     b.beginPath(); b.arc(sx,sy,34,0,TAU); b.fill();
+    b.strokeStyle='rgba(255,246,217,0.30)'; b.lineWidth=1.5;
+    b.beginPath(); b.arc(sx,sy,30,Math.PI*1.08,Math.PI*1.92); b.stroke();
+    // high haze strata — barely-there width-wide bands so the mid sky isn't a flat plate
+    [{y:H*0.40,c:'78,240,208',a:0.045},{y:H*0.52,c:'255,83,118',a:0.035},{y:H*0.63,c:'110,116,190',a:0.05}].forEach(o=>{
+      const hg=b.createLinearGradient(0,o.y-46,0,o.y+46);
+      hg.addColorStop(0,'rgba('+o.c+',0)');
+      hg.addColorStop(0.5,'rgba('+o.c+','+o.a+')');
+      hg.addColorStop(1,'rgba('+o.c+',0)');
+      b.fillStyle=hg; b.fillRect(0,o.y-46,W,92);
+    });
     bgCan=c;
   }
   // vignette
@@ -1355,7 +1473,7 @@ requestAnimationFrame(frame);
 window.__vibehop={
   get state(){return {mode:G.mode,score:Math.floor(G.score),pips:G.pips,maxPips:G.maxPips,
     inv:+G.inv.toFixed(2),combo:G.combo,best:G.best,orbs:G.orbsGot,rings:G.ringsHit,
-    dist:Math.floor(G.dist),speed:Math.round(G.speed),held:input.down,onBeats:G.onBeats,hops:G.hops,
+    dist:Math.floor(G.dist),speed:Math.round(G.speed),held:input.down,onBeats:G.onBeats,hops:G.hops,flash:+G.flash.toFixed(2),
     view:{w:W,h:H,groundY,playerX:+P.x.toFixed(1)},
     player:{x:+P.x.toFixed(1),y:+P.y.toFixed(1),h:P.h,vy:Math.round(P.vy),onGround:P.onGround,dashActive:+P.dashActive.toFixed(2)},
     hud:{top:14+getSafeTop()+(installBtnVisible()?46:0),installVisible:installBtnVisible()},

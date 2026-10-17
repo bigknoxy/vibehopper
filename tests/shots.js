@@ -29,11 +29,30 @@ const optimize = (file) => {
   const shoot = async (name, viewport, prep) => {
     const page = await browser.newPage();
     await page.setViewport(viewport);
+    // hero shots should look like a real session, not a first launch
+    await page.evaluateOnNewDocument(() => {
+      try {
+        localStorage.setItem('vibehop_best', '12480');
+        localStorage.setItem('vibehop_dash_tut', 'done');
+      } catch (e) {}
+    });
     await page.goto(URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
     await page.waitForSelector('#btnStart');
     await sleep(900);
     if (prep) await prep(page);
-    await sleep(150);
+    // wait for a ring/orb to be on screen AND for the damage flash to clear, so the
+    // capture isn't tinted magenta
+    for (let i = 0; i < 40; i++) {
+      const c = await page.evaluate(() => { const s = window.__vibehop; if (!s || s.state.mode !== 'play') return null; const st = s.state; return { orbs: st.counts.orbs, rings: st.counts.rings, flash: st.flash }; });
+      if (c && (c.orbs > 0 || c.rings > 0) && c.flash < 0.02) break;
+      await sleep(160);
+    }
+    await page.evaluate(() => { const s = window.__vibehop; if (s && s.state.mode === 'play') s.probe.setPips(3); });
+    // mid-jump reads far more dynamic than standing still
+    await page.keyboard.press('Space');
+    await sleep(200);
+    await page.evaluate(() => { const s = window.__vibehop; if (s && s.state.mode === 'play') s.probe.setPips(3); });
+    await sleep(40);
     const file = path.join(OUT, name);
     await page.screenshot({ path: file });
     optimize(file);

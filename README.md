@@ -56,8 +56,9 @@ stop at one round.
 
 - 🎧 **Music that writes itself** — 115 BPM lo-fi loop and every sound effect synthesized live
   with the Web Audio API. Zero audio files.
-- 🌌 **Neon-drenched canvas** — three layers of parallax, floating motes, glass pillars,
-  particle bursts, plus screen shake and a colour flash when your shield takes a hit.
+- 🌌 **Neon-drenched canvas** — a baked starfield, feathered sun, layered ridges, a lit night
+  city and glass pillars in parallax, plus particle bursts, screen shake and a colour flash
+  when your shield takes a hit.
 - 📐 **Right-sized on every screen** — phones play full-bleed; on a wide monitor the field is
   capped at a phone-like width so the difficulty stays honest, framed by a soft neon bezel.
 - ⏸ **Respectful of real life** — on-screen pause and mute (both persist), auto-pause when
@@ -67,7 +68,7 @@ stop at one round.
 - 📱 **Install it like an app** — Android gets an in-game install button; iOS gets a
   Share → Add to Home Screen tip and real PNG home-screen icons. Runs fullscreen, launches offline.
 - 💾 **Best score persists** — and it only ever ratchets *up*.
-- 🪶 **One HTML file** — the whole game is `index.html` (61KB, no build step). View source, learn, remix.
+- 🪶 **One HTML file** — the whole game is `index.html` (67KB, no build step). View source, learn, remix.
 
 ## Install it like an app
 
