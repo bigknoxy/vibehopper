@@ -45,6 +45,8 @@
     color:#e9ecff; user-select:none; -webkit-user-select:none; touch-action:none;
   }
   #wrap{position:fixed;inset:0;display:grid;place-items:center;}
+  /* wide screens: the play field is capped to a phone shape, so frame it like a device */
+  body.fld #game{border-radius:20px; box-shadow:0 0 0 1px rgba(78,240,208,.20), 0 0 70px rgba(78,240,208,.07);}
   canvas{display:block;width:100%;height:100%;touch-action:none;}
 
   .overlay{
@@ -121,6 +123,15 @@
     box-shadow:0 0 14px rgba(78,240,208,.18);
   }
   #controls button.hidden{display:none;}
+  .ico{width:20px; height:20px; display:block; fill:none; stroke:currentColor;
+       stroke-width:2; stroke-linecap:round; stroke-linejoin:round;}
+  button.ghost, #btnInstall{display:inline-flex; align-items:center; gap:8px;}
+  #btnInstall .ico{width:16px; height:16px;}
+  #btnMute .i-snd{display:none;}
+  #btnMute.sound-on .i-snd{display:block;}
+  #btnMute.sound-on .i-mut{display:none;}
+  .mark{width:78px; height:78px; margin:0 auto 2px; display:block;
+        filter:drop-shadow(0 0 20px rgba(78,240,208,.35));}
   #toast{
     position:fixed; left:50%; transform:translateX(-50%);
     bottom:calc(72px + env(safe-area-inset-bottom)); z-index:31;
@@ -134,18 +145,19 @@
 <body>
 <div id="wrap"><canvas id="game" role="img" aria-label="VibeHop gameplay — tap anywhere or press space to hop; tap glowing rings mid-air to dash"></canvas></div>
 
-<button id="btnInstall" class="hidden">📲 Install App</button>
+<button id="btnInstall" class="hidden"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11m0 0l-4-4m4 4l4-4M4 19h16"/></svg><span>Install App</span></button>
 <div id="iosTip">Install: tap <b>Share ⎋</b> → <b>Add to Home Screen ＋</b><button id="iosClose" aria-label="Dismiss install tip">×</button></div>
 <div id="toast" role="status" aria-live="polite"></div>
 
 <!-- corner controls: pause + mute (shown while playing / always for mute) -->
 <div id="controls">
-  <button id="btnPause" class="hidden" aria-label="Pause game" title="Pause">⏸</button>
-  <button id="btnMute" aria-label="Toggle sound" title="Sound on/off" aria-pressed="false">🔊</button>
+  <button id="btnPause" class="hidden" aria-label="Pause game" title="Pause"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5v14M15 5v14"/></svg></button>
+  <button id="btnMute" class="sound-on" aria-label="Sound on — tap to mute" title="Sound on/off" aria-pressed="false"><svg class="ico i-snd" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 010 7"/></svg><svg class="ico i-mut" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 10l5 5M21 10l-5 5"/></svg></button>
 </div>
 
 <!-- TITLE -->
 <div class="overlay" id="uiTitle">
+  <svg class="mark" viewBox="0 0 512 512" aria-hidden="true"><circle cx="256" cy="212" r="86" fill="none" stroke="#ffd166" stroke-width="14" opacity=".85"/><circle cx="256" cy="212" r="52" fill="#ff5376"/><path d="M62 344 Q 150 246 226 312 T 456 296" fill="none" stroke="#4ef0d0" stroke-width="30" stroke-linecap="round"/></svg>
   <div class="logo">VibeHop</div>
   <div class="tag">lo-fi neon rhythm runner</div>
   <div class="pips" id="titlePips"><span class="pip"></span><span class="pip"></span><span class="pip"></span></div>
@@ -159,7 +171,7 @@
 <div class="overlay hidden" id="uiPause">
   <div class="logo" style="font-size:clamp(34px,8vw,62px)">Paused</div>
   <div class="row"><button id="btnResume">▶ Resume</button></div>
-  <div class="row"><button class="ghost" id="btnRestartP">↺ Restart</button><button class="ghost" id="btnHomeP" aria-label="Back to title">⌂ Home</button></div>
+  <div class="row"><button class="ghost" id="btnRestartP"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 11-2.3-5.7M20 4v4h-4"/></svg>Restart</button><button class="ghost" id="btnHomeP" aria-label="Back to title"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11l8-7 8 7v9H4z"/></svg>Home</button></div>
   <div class="hint" style="font-size:12px;color:#7c86b8">Vibes on hold — your run is safe.</div>
 </div>
 
@@ -171,8 +183,8 @@
   <div class="best">best <b id="bestOver">0</b> · <span id="overStats"></span></div>
   <div class="row">
     <button id="btnAgain">↺ Again</button>
-    <button class="ghost" id="btnShare" aria-label="Share your score">↗ Share</button>
-    <button class="ghost" id="btnHome">⌂ Home</button>
+    <button class="ghost" id="btnShare" aria-label="Share your score"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0L8 8m4-4l4 4M5 20h14"/></svg>Share</button>
+    <button class="ghost" id="btnHome"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11l8-7 8 7v9H4z"/></svg>Home</button>
   </div>
 </div>
 
@@ -196,9 +208,13 @@ const REDUCED=matchMedia('(prefers-reduced-motion: reduce)').matches; // calms s
 const cv=document.getElementById('game');
 const ctx=cv.getContext('2d',{alpha:false});
 let W=0,H=0,DPR=1, groundY=0;
+const FIELD_CAP=560;                 // wide screens play in a phone-shaped field: tuning stays identical everywhere
 function resize(){
   DPR=Math.min(window.devicePixelRatio||1,2);
-  W=Math.floor(innerWidth); H=Math.floor(innerHeight);
+  const iw=Math.floor(innerWidth), ih=Math.floor(innerHeight);
+  if(iw>FIELD_CAP){ W=FIELD_CAP; H=Math.min(ih,Math.round(FIELD_CAP*1.7)); }
+  else { W=iw; H=ih; }
+  document.body.classList.toggle('fld',iw>FIELD_CAP);
   cv.width=Math.floor(W*DPR); cv.height=Math.floor(H*DPR);
   cv.style.width=W+'px'; cv.style.height=H+'px';
   ctx.setTransform(DPR,0,0,DPR,0,0);
@@ -212,7 +228,7 @@ addEventListener('orientationchange',()=>setTimeout(resize,120),{passive:true});
 /* ============================================================
    AUDIO — WebAudio synth lo-fi engine @115 BPM
    ============================================================ */
-const MUS={bpm:115};
+const MUS={bpm:115,beats:[]};   // beats[] = ctx-time of the last few scheduled beats, for on-beat scoring
 MUS.beat=60/MUS.bpm;            // 0.5217s
 MUS.bar=MUS.beat*4;
 // 8-bar chord loop: Am7 - Dm7 - G7 - Cmaj7 variant (lo-fi jazzy), pentatonic melody
@@ -298,6 +314,7 @@ function scheduler(){
   const sixteenth=MUS.beat/4;
   while(seq.nextTime < c.currentTime+0.14){
     const t=seq.nextTime, st=seq.step, bar4=st%16, barN=Math.floor(st/16)%8;
+    if(bar4%4===0){ MUS.beats.push(t); if(MUS.beats.length>8) MUS.beats.shift(); }
     // --- drums ---
     if(bar4===0||bar4===8) drum(t,0.95);                         // kick
     if(bar4===4||bar4===12) { drum(t,0.5); drum(t,0.35,true); }  // soft ghost kick answers on 3 & 7
@@ -394,9 +411,12 @@ const G={
   dashCd:0,
   shake:0, flash:0,
   orbsGot:0, ringsHit:0,
-  tPlay:0, hops:0, overAt:-99
+  tPlay:0, hops:0, overAt:-99,
+  onBeats:0, beatFlash:0,   // hops landed within ±90ms of a beat
+  dashTut:true              // pulse a TAP hint inside rings until the first dash lands
 };
 try{ G.best=parseInt(localStorage.getItem('vibehop_best')||'0',10)||0; }catch(e){ G.best=0; }
+try{ G.dashTut = localStorage.getItem('vibehop_dash_tut')!=='done'; }catch(e){}
 
 /* ---------- player ---------- */
 const P={
@@ -521,11 +541,11 @@ function startGame(){
   unlockAudio();
   G.mode='play'; G.score=0; G.dist=0; G.pips=3; G.inv=0.8;
   G.combo=1; G.comboBoost=0; G.dashCd=0; G.shake=0; G.flash=0; G.orbsGot=0; G.ringsHit=0;
-  G.tPlay=0; G.hops=0; G.overAt=-99;
+  G.tPlay=0; G.hops=0; G.overAt=-99; G.onBeats=0; G.beatFlash=0;
   input.down=false; input.justPressed=false; // a press from the menu never leaks into the run
   resetPlayer();
   initWorld();
-  world.spawnGap=W*0.9;
+  world.spawnGap=Math.max(W*0.9,760);  // a real runway — the first hazard is never a cheap shot
   hide('uiTitle'); hide('uiOver'); hide('uiPause'); hide('iosTip');
   musicStart();
   syncPlayButtons();
@@ -557,6 +577,12 @@ function hop(){
   if(canJump){
     P.vy=JUMP_V; P.onGround=false; P.coyote=0; P.buffer=0;
     G.hops++; // monotonic takeoff counter — tests assert on this, not on onGround flips
+    // on-beat bonus: the sequencer already knows where the beats are, so reward timing
+    if(audio.ctx && MUS.beats.length){
+      let off=9;
+      for(const b of MUS.beats){ const d=Math.abs(audio.ctx.currentTime-b); if(d<off) off=d; }
+      if(off<=0.09){ G.onBeats++; G.beatFlash=0.5; G.score+=2*G.combo; }
+    }
     P.squash=0.78; P.stretch=1.22;
     SFX.jump();
     burst(P.x,P.y+P.h*0.4,PAL.mint,10,220,0.5);
@@ -569,6 +595,7 @@ function hop(){
 function triggerDash(r){
   r.dead=true;
   G.ringsHit++;
+  if(G.dashTut){ G.dashTut=false; try{ localStorage.setItem('vibehop_dash_tut','done'); }catch(e){} toast('★ dash! +15 — you keep your speed'); }
   G.dashCd=DASH_CD;
   P.dashActive=DASH_TIME;
   P.vy=Math.min(P.vy,-380);
@@ -745,6 +772,7 @@ function updateFX(dt,spd){
   if(G.comboBoost>0){ G.comboBoost-=dt; if(G.comboBoost<=0) G.combo=Math.max(1,G.combo-1); }
   if(G.shake>0) G.shake=Math.max(0,G.shake-dt*38);
   if(G.flash>0) G.flash=Math.max(0,G.flash-dt*2.6);
+  if(G.beatFlash>0) G.beatFlash=Math.max(0,G.beatFlash-dt);
 
   for(let i=world.parts.length-1;i>=0;i--){
     const p=world.parts[i];
@@ -827,14 +855,14 @@ function drawBackground(now){
       p.g.addColorStop(1,'rgba(78,240,208,0.1)');
     }
     ctx.save(); ctx.translate(0,groundY);
-    ctx.globalAlpha=0.30*pulse;
+    ctx.globalAlpha=0.20*pulse;
     ctx.fillStyle=p.g;
     ctx.fillRect(p.x,-p.h,p.w,p.h);
     ctx.globalAlpha=1;
-    ctx.fillStyle='rgba(78,240,208,'+(0.16*pulse)+')';
-    ctx.fillRect(p.x+p.w*0.35-4,-p.h,11,p.h);
-    ctx.fillStyle='rgba(78,240,208,'+(0.75*pulse)+')';
-    ctx.fillRect(p.x+p.w*0.35,-p.h,3,p.h);
+    ctx.fillStyle='rgba(78,240,208,'+(0.10*pulse)+')';
+    ctx.fillRect(p.x+p.w*0.35-4,-p.h,10,p.h);
+    ctx.fillStyle='rgba(78,240,208,'+(0.45*pulse)+')';
+    ctx.fillRect(p.x+p.w*0.35,-p.h,2,p.h);
     ctx.restore();
   });
 
@@ -864,7 +892,7 @@ function drawGround(now){
     ctx.drawImage(strip,0,groundY-8.5,W,17);
     ctx.globalAlpha=1;
   }
-  ctx.fillStyle='rgba(78,240,208,0.9)';
+  ctx.fillStyle='rgba(78,240,208,0.55)';
   ctx.fillRect(0,groundY-2,W,3);
   // moving floor grid — one accumulated path per style instead of a stroke per line
   const spd=G.mode==='play'?G.speed:(G.mode==='title'?120:0);
@@ -937,6 +965,17 @@ function drawRing(r,now){
     ctx.beginPath(); ctx.arc(Math.cos(a)*r.r*pulse,Math.sin(a)*r.r*pulse,2.2,0,TAU); ctx.fill();
   }
   ctx.restore();
+  // first-run coaching: pulse a TAP hint inside the ring until a dash has landed
+  if(G.dashTut && G.mode==='play'){
+    const a=0.45+0.45*Math.sin(now/220);
+    ctx.save();
+    ctx.globalAlpha=a;
+    ctx.fillStyle=PAL.amber;
+    ctx.font='900 13px system-ui,-apple-system,Segoe UI,Roboto,sans-serif';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('TAP',0,1);
+    ctx.restore();
+  }
 }
 
 function drawPlayer(now){
@@ -969,6 +1008,11 @@ function drawPlayer(now){
   ctx.fill();
   noGlow();
   ctx.fill();                     // double-fill: denser core, softer halo
+  // dark rim so the hero never dissolves into the mint floor line / pillars behind it
+  ctx.strokeStyle='rgba(13,14,30,0.85)';
+  ctx.lineWidth=2;
+  roundRect(-P.w/2,-P.h/2,P.w,P.h,rr);
+  ctx.stroke();
   if(G.inv>0){
     // invulnerable: pulsing white-mint outline — keeps the body colour readable
     const pulse=0.55+0.45*Math.sin(G.inv*18);
@@ -1051,9 +1095,15 @@ function drawHUD(){
   if(G.combo>1){
     glow(PAL.amber,14);
     ctx.fillStyle=PAL.amber;
-    ctx.font=FONT_MID;
-    ctx.fillText('x'+G.combo,17,top+72);
+    ctx.font=FONT_SM;
+    ctx.fillText('COMBO x'+G.combo,17,top+72);
     noGlow();
+  }
+  if(G.beatFlash>0){                 // rewarded timing — the "rhythm" in rhythm runner
+    ctx.globalAlpha=Math.min(1,G.beatFlash*2.2);
+    ctx.fillStyle=PAL.amber; ctx.font=FONT_SM;
+    ctx.fillText('✦ ON BEAT',17,top+(G.combo>1?96:72));
+    ctx.globalAlpha=1;
   }
   // pip row top-right
   const pr=W-18;
@@ -1224,7 +1274,7 @@ function syncPlayButtons(){
   // the install pill owns the top-right corner: hide it while playing so it never
   // covers the pip row, and let drawHUD() shift down while it is visible
   const bi=document.getElementById('btnInstall');
-  if(bi) bi.classList.toggle('hidden', !(deferredPrompt && G.mode!=='play'));
+  if(bi) bi.classList.toggle('hidden', !(deferredPrompt && (G.mode==='title'||G.mode==='over')));
 }
 function toast(msg){
   const t=document.getElementById('toast');
@@ -1234,8 +1284,9 @@ function toast(msg){
 function applyMute(){
   if(audio.master) audio.master.gain.value=audio.muted?0:0.9;
   const b=document.getElementById('btnMute');
-  b.textContent=audio.muted?'🔇':'🔊';
+  b.classList.toggle('sound-on',!audio.muted);
   b.setAttribute('aria-pressed',String(audio.muted));
+  b.setAttribute('aria-label',audio.muted?'Sound off — tap to unmute':'Sound on — tap to mute');
 }
 function toggleMute(){
   audio.muted=!audio.muted;
@@ -1304,7 +1355,7 @@ requestAnimationFrame(frame);
 window.__vibehop={
   get state(){return {mode:G.mode,score:Math.floor(G.score),pips:G.pips,maxPips:G.maxPips,
     inv:+G.inv.toFixed(2),combo:G.combo,best:G.best,orbs:G.orbsGot,rings:G.ringsHit,
-    dist:Math.floor(G.dist),speed:Math.round(G.speed),held:input.down,hops:G.hops,
+    dist:Math.floor(G.dist),speed:Math.round(G.speed),held:input.down,onBeats:G.onBeats,hops:G.hops,
     view:{w:W,h:H,groundY,playerX:+P.x.toFixed(1)},
     player:{x:+P.x.toFixed(1),y:+P.y.toFixed(1),h:P.h,vy:Math.round(P.vy),onGround:P.onGround,dashActive:+P.dashActive.toFixed(2)},
     hud:{top:14+getSafeTop()+(installBtnVisible()?46:0),installVisible:installBtnVisible()},

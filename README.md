@@ -26,8 +26,8 @@ No installs required, no downloads, no dependencies. Just vibes.
 You're a little neon runner in a night-lit city that scrolls to a 115 BPM lo-fi groove.
 One button. Infinite vibes. Your shield has **three pips** — clip a wall and it shatters,
 costing one pip and buying you 1.5 seconds of invincibility. Collect prism orbs to heal
-and stack your multiplier up to **×5**, thread jump rings for a mid-air dash, and chase
-your best score deeper into the run.
+and stack your multiplier up to **×5**, thread jump rings for a mid-air dash, and hop
+**on the beat** for bonus points. Chase your best score deeper into the run.
 
 It's the kind of game you finish a round of while the kettle boils — except you won't
 stop at one round.
@@ -47,6 +47,8 @@ stop at one round.
 - 🛡️ **3-pip shield** — collisions shatter the obstacle, cost 1 pip, and grant 1.5s of invulnerability.
 - 🔮 **Prism orbs** — restore a pip **and** raise your multiplier (caps at ×5).
 - ⭕ **Jump rings** — tap while inside one for a mid-air dash and bonus points.
+- 🎵 **Play on the beat** — hop within a beat of the groove for a `✦ ON BEAT` bonus.
+  (The first ring you meet teaches the dash; new players are never left guessing.)
 - 🧠 **Forgiving by design** — 70% hitbox, 6-frame jump buffering, hold-to-auto-hop,
   spawn grace, and a variable-height jump (tap for a hop, hold for a full jump).
 
@@ -55,7 +57,9 @@ stop at one round.
 - 🎧 **Music that writes itself** — 115 BPM lo-fi loop and every sound effect synthesized live
   with the Web Audio API. Zero audio files.
 - 🌌 **Neon-drenched canvas** — three layers of parallax, floating motes, glass pillars,
-  particle bursts, screen shake and hit-stop on collisions.
+  particle bursts, plus screen shake and a colour flash when your shield takes a hit.
+- 📐 **Right-sized on every screen** — phones play full-bleed; on a wide monitor the field is
+  capped at a phone-like width so the difficulty stays honest, framed by a soft neon bezel.
 - ⏸ **Respectful of real life** — on-screen pause and mute (both persist), auto-pause when
   you switch tabs, reduced-motion support, and a one-tap **Share** on the game-over screen.
 - 🏆 **Chase moments** — a celebratory NEW BEST pop with your score delta, obstacles that
@@ -63,7 +67,7 @@ stop at one round.
 - 📱 **Install it like an app** — Android gets an in-game install button; iOS gets a
   Share → Add to Home Screen tip and real PNG home-screen icons. Runs fullscreen, launches offline.
 - 💾 **Best score persists** — and it only ever ratchets *up*.
-- 🪶 **One HTML file** — the whole game is `index.html` (56KB, no build step). View source, learn, remix.
+- 🪶 **One HTML file** — the whole game is `index.html` (61KB, no build step). View source, learn, remix.
 
 ## Install it like an app
 
@@ -79,8 +83,10 @@ The in-game tip walks you through it.
   with cached glow sprites and baked background layers so a full frame fits a 60fps budget.
 - Audio: lookahead scheduler with `AudioContext` — kick, hat, snare, bass, pads and a
   pentatonic lead, quantized to an 8-bar Am7 → Dm7 → G7 → Cmaj7 progression.
-- PWA: `manifest.json` (PNG + maskable icons) + `sw.js` (network-first navigations with an
-  offline cache fallback; the cache version is bumped automatically by `deploy.sh`).
+- PWA: `manifest.json` (PNG + maskable icons, screenshots, `id`/`display_override`) + `sw.js`
+  (network-first navigations with an offline cache fallback; cache version bumped automatically by
+  `deploy.sh`, which also re-renders the icons from `docs/icon.svg` through headless Chrome).
+- Social card: `docs/og.png` is composed by `tests/compose-og.js` from a real gameplay frame.
 - Zero runtime dependencies. No fonts, no trackers, no CDNs — **0 external requests**
   (verified automatically, see below).
 
@@ -108,6 +114,8 @@ CHROME_BIN=/path/to/chrome npm run verify:live   # 11-check E2E against the depl
 CHROME_BIN=/path/to/chrome npm run features      # mute / pause / share / OG / a11y / stale-input
 CHROME_BIN=/path/to/chrome npm run falsify       # invulnerability, buffering, hitbox, perf, offline…
 CHROME_BIN=/path/to/chrome npm run regress       # one check per bug the code review found
+CHROME_BIN=/path/to/chrome npm run shots         # refresh README screenshots from the live build
+CHROME_BIN=/path/to/chrome npm run og            # recompose the social card (docs/og.png)
 ```
 
 Current status — every suite green, locally and against the deployed URL:
@@ -126,6 +134,8 @@ Bugs and lies this gauntlet has already caught (and fixed):
 - 🐛 jump buffering was half-wired: a mid-air press never triggered the landing hop → now it does
 - 🐛 the death burst froze mid-air on the game-over screen → particles keep ageing
 - 🐛 a tap on the iOS install tip leaked a phantom hop into the start of a run → input is cleared and captured per pointer
+- 🐛 the app icons shipped as black plates (ImageMagick silently dropped the SVG gradients) → `deploy.sh` renders them through headless Chrome and asserts the colours
+- 🐛 on a wide desktop window the game was measurably easier (viewport-relative spawns, four obstacles on screen) → the play field is capped
 - 📉 **performance**: measured per-frame callback cost p95 **0.8 ms** (max 3.5 ms) in headless software
   rendering, and the fixed-step sim stays within **2–3%** of wall-clock time — reported by `falsifiers.js`
 

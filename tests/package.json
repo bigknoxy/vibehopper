@@ -10,6 +10,7 @@
     "falsify": "node falsifiers.js",
     "regress": "node regress.js",
     "shots": "node shots.js",
+    "og": "node compose-og.js",
     "crops": "node crops.js"
   },
   "dependencies": {

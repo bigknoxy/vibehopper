@@ -45,13 +45,24 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   const has192 = icons.some(i => (i.sizes || '').includes('192x192'));
   const hasMaskable = icons.some(i => (i.purpose || '').includes('maskable'));
   const has512 = icons.some(i => (i.sizes || '').includes('512x512'));
+  // every icon and screenshot the manifest advertises must actually resolve
+  const assets = await page.evaluate(async (j) => {
+    const urls = [...(j.icons || []), ...(j.screenshots || [])].map(i => i.src).filter(s => !s.startsWith('data:'));
+    const out = [];
+    for (const u of urls) { try { const r = await fetch(u, { method: 'GET' }); out.push({ src: u, status: r.status }); } catch { out.push({ src: u, status: 0 }); } }
+    return out;
+  }, mf.j);
+  const assetsOk = assets.length > 0 && assets.every(a => a.status === 200);
   results.D2_manifest = {
     status: mf.status, name: mf.j.name, short: mf.j.short_name, start: mf.j.start_url,
     scope: mf.j.scope, display: mf.j.display, theme: mf.j.theme_color, bg: mf.j.background_color,
     icons: icons.map(i => ({ sizes: i.sizes, purpose: i.purpose, src: i.src.slice(0, 40) })),
-    claim: 'valid JSON, standalone, ./ start+scope, 192 + 512 + maskable icons',
+    screenshots: (mf.j.screenshots || []).map(s => ({ src: s.src, sizes: s.sizes })),
+    assetStatuses: assets,
+    id: mf.j.id, displayOverride: mf.j.display_override,
+    claim: 'valid JSON, standalone, ./ start+scope, 192 + 512 + maskable icons, every icon/screenshot URL resolves',
     pass: mf.status === 200 && mf.j.display === 'standalone' && mf.j.start_url === './' && mf.j.scope === './'
-      && has192 && has512 && hasMaskable
+      && has192 && has512 && hasMaskable && assetsOk
   };
 
   // ---- D3: service worker registers + caches on production ----

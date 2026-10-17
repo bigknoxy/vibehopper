@@ -49,11 +49,18 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
     await page.reload({ waitUntil: 'domcontentloaded' });
     await page.waitForSelector('#btnStart');
     await sleep(300);
-    const after = await page.evaluate(() => ({
-      muted: window.__vibehop.state.audio.muted,
-      label: document.getElementById('btnMute').textContent.trim()
-    }));
-    mutePersists = after.muted === true && /on|🔇/u.test(after.label);
+    const after = await page.evaluate(() => {
+      const b = document.getElementById('btnMute');
+      return {
+        muted: window.__vibehop.state.audio.muted,
+        label: b.getAttribute('aria-label') || '',
+        pressed: b.getAttribute('aria-pressed'),
+        soundOnClass: b.classList.contains('sound-on')
+      };
+    });
+    // the icon is an inline SVG now: assert the accessible contract, not an emoji
+    mutePersists = after.muted === true && after.pressed === 'true' && after.soundOnClass === false
+                   && /off|muted/i.test(after.label);
   }
   results.F1_mute_button = { hasMute, muteState, muteWorks, mutePersists, pass: hasMute && muteWorks && mutePersists };
 

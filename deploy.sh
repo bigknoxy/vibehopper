@@ -25,6 +25,28 @@ if [ -f sw.js ] && grep -q "const CACHE = 'vibehop-v" sw.js; then
   ok "Service worker cache stamped: vibehop-v$STAMP"
 fi
 
+# ------------------------------------------------------------------ icon render --
+# The PNG icons are rendered from the SVGs so the mark can never drift from the
+# source (ImageMagick's SVG delegate drops the gradient — use a browser).
+render_icons() {
+  local chrome=""
+  for c in google-chrome-stable google-chrome chromium chromium-browser; do
+    command -v "$c" >/dev/null 2>&1 && { chrome="$c"; break; }
+  done
+  [ -n "$chrome" ] || { warn "No Chrome found — keeping the existing PNG icons"; return 0; }
+  [ -f docs/icon.svg ] || return 0
+  ( cd docs
+    "$chrome" --headless=new --no-sandbox --disable-gpu --hide-scrollbars --force-device-scale-factor=1 \
+      --window-size=512,512 --screenshot=icon-512.png "file://$PWD/icon.svg" >/dev/null 2>&1
+    "$chrome" --headless=new --no-sandbox --disable-gpu --hide-scrollbars --force-device-scale-factor=1 \
+      --window-size=512,512 --screenshot=icon-maskable-512.png "file://$PWD/icon-maskable.svg" >/dev/null 2>&1
+    convert icon-512.png -resize 192x192 -strip -define png:compression-level=9 icon-192.png
+    convert icon-512.png -resize 180x180 -strip -define png:compression-level=9 icon-180.png
+  )
+  ok "Icons re-rendered from docs/icon.svg"
+}
+if [ -f docs/icon.svg ]; then render_icons; fi
+
 # ---------------------------------------------------------------- preflight --
 command -v git   >/dev/null || { echo "git is required";   exit 1; }
 command -v gh    >/dev/null || { echo "GitHub CLI is required: https://cli.github.com/"; exit 1; }

@@ -1,15 +1,39 @@
 {
+  "id": "./",
   "name": "VibeHop — Lo-Fi Neon Rhythm Runner",
   "short_name": "VibeHop",
   "description": "A chill lo-fi neon rhythm runner. Hop, dash through glowing rings, collect prisms. Plays offline.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
   "orientation": "any",
   "background_color": "#0d0e1e",
   "theme_color": "#0d0e1e",
-  "categories": ["games", "entertainment"],
+  "categories": [
+    "games",
+    "entertainment"
+  ],
   "lang": "en",
+  "screenshots": [
+    {
+      "src": "./docs/title.png",
+      "sizes": "640x1421",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "VibeHop title screen — tap to start, three-pip shield, best score"
+    },
+    {
+      "src": "./docs/gameplay.png",
+      "sizes": "640x1421",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Mid-run: obstacles, glowing dash rings and prism orbs"
+    }
+  ],
   "icons": [
     {
       "src": "./docs/icon-192.png",
