@@ -41,11 +41,17 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
     const j = await r.json();
     return { status: r.status, ctype: r.headers.get('content-type'), j };
   });
+  const icons = mf.j.icons || [];
+  const has192 = icons.some(i => (i.sizes || '').includes('192x192'));
+  const hasMaskable = icons.some(i => (i.purpose || '').includes('maskable'));
+  const has512 = icons.some(i => (i.sizes || '').includes('512x512'));
   results.D2_manifest = {
     status: mf.status, name: mf.j.name, short: mf.j.short_name, start: mf.j.start_url,
     scope: mf.j.scope, display: mf.j.display, theme: mf.j.theme_color, bg: mf.j.background_color,
-    icon: { sizes: mf.j.icons[0].sizes, purpose: mf.j.icons[0].purpose, scheme: mf.j.icons[0].src.slice(0, 19) },
-    pass: mf.status === 200 && mf.j.display === 'standalone' && mf.j.icons.length === 1 && mf.j.icons[0].purpose === 'any maskable'
+    icons: icons.map(i => ({ sizes: i.sizes, purpose: i.purpose, src: i.src.slice(0, 40) })),
+    claim: 'valid JSON, standalone, ./ start+scope, 192 + 512 + maskable icons',
+    pass: mf.status === 200 && mf.j.display === 'standalone' && mf.j.start_url === './' && mf.j.scope === './'
+      && has192 && has512 && hasMaskable
   };
 
   // ---- D3: service worker registers + caches on production ----
@@ -62,7 +68,12 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
     }
     return { scope: reg.scope, active: !!reg.active, state: reg.active && reg.active.state, controller: !!navigator.serviceWorker.controller, names, entries };
   });
-  results.D3_service_worker = { ...sw, pass: sw.active && sw.state === 'activated' && sw.entries.length >= 3 && sw.names.includes('vibehop-v3') };
+  results.D3_service_worker = {
+    ...sw,
+    claim: 'SW active+controlling, versioned cache holds the app shell (./, index.html, manifest.json)',
+    pass: sw.active && sw.state === 'activated' && sw.controller && sw.names.some(n => /^vibehop-v\d+/.test(n))
+      && ['/vibehopper/', '/vibehopper/index.html', '/vibehopper/manifest.json'].every(u => sw.entries.includes(u))
+  };
 
   // ---- D4: gameplay — start, audio unlocks on tap ----
   await page.click('#btnStart');
