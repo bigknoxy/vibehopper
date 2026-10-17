@@ -555,14 +555,14 @@ function update(dt){
   P.rot=lerp(P.rot,P.onGround?0:clamp(P.vy/2600,-0.22,0.3),1-Math.pow(0.002,dt));
   P.rotV=lerp(P.rotV,0,1-Math.pow(0.01,dt));
 
-  // trail
+  // trail — short, bright comet tail
   P.trailT-=dt;
   if(P.trailT<=0){
-    P.trailT=0.028;
-    P.trail.push({x:P.x,y:P.y+P.h*0.5,r:P.r*0.9,a:0.5});
-    if(P.trail.length>16) P.trail.shift();
+    P.trailT=0.022;
+    P.trail.push({x:P.x,y:P.y+P.h*0.5,r:P.r*0.72,a:0.42});
+    if(P.trail.length>12) P.trail.shift();
   }
-  for(let i=0;i<P.trail.length;i++) P.trail[i].a*=0.90;
+  for(let i=0;i<P.trail.length;i++) P.trail[i].a*=0.80;
 
   // dash trails
   for(let i=P.dashTrail.length-1;i>=0;i--){ const d=P.dashTrail[i]; d.a-=dt*2.2; if(d.a<=0) P.dashTrail.splice(i,1); }
@@ -801,13 +801,13 @@ function drawRing(r,now){
 
 function drawPlayer(now){
   const cx=P.x, cy=P.y-P.h*0.5;
-  // trail
+  // trail — comet tail behind the character
   ctx.save();
   P.trail.forEach(t=>{
-    ctx.globalAlpha=t.a*0.5;
-    glow(PAL.mint,14);
+    ctx.globalAlpha=t.a*0.55;
+    glow(PAL.mint,12);
     ctx.fillStyle=PAL.mint;
-    ctx.beginPath(); ctx.arc(t.x,t.y,t.r*0.7,0,TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(t.x-t.r*0.5,t.y,t.r*0.8,0,TAU); ctx.fill();
   });
   ctx.restore();
   // dash trail
@@ -824,33 +824,37 @@ function drawPlayer(now){
   // invulnerability flicker
   const flick=G.inv>0 && (Math.floor(G.inv*20)%2===0);
   ctx.globalAlpha=flick?0.45:1;
-  // shell
   const shellCol=G.inv>0?PAL.amber:PAL.mint;
-  glow(shellCol,26);
+  const rr=Math.min(12,Math.min(P.w,P.h)/2);
+  // solid glow shell — reads clearly against every background layer
+  glow(shellCol,28);
   ctx.fillStyle=shellCol;
-  const rr=Math.min(P.w,P.h)/2;
-  roundRect(-P.w/2,-P.h/2,P.w,P.h,Math.min(12,rr));
+  roundRect(-P.w/2,-P.h/2,P.w,P.h,rr);
   ctx.fill();
+  ctx.fill();                     // double-fill: denser core, softer halo
   noGlow();
-  // inner core
-  ctx.fillStyle='rgba(13,14,30,0.85)';
-  roundRect(-P.w/2+4,-P.h/2+5,P.w-8,P.h-10,8);
+  // inner glass (inset, centred) — light tint only, keeps the body solid
+  ctx.fillStyle='rgba(255,255,255,0.26)';
+  roundRect(-P.w/2+4,-P.h/2+5,P.w-8,P.h-10,rr-3);
   ctx.fill();
-  // eye / vibe dot facing right
-  glow(PAL.mag,16);
+  // dark visor band — gives the character a face
+  ctx.fillStyle='rgba(13,14,30,0.72)';
+  roundRect(-P.w/2+5,-P.h*0.16,P.w-10,13,6);
+  ctx.fill();
+  // glowing eye inside the visor, facing right
+  glow(PAL.mag,14);
   ctx.fillStyle=PAL.mag;
-  ctx.beginPath(); ctx.arc(P.w*0.16,-P.h*0.06,4.4,0,TAU); ctx.fill();
+  ctx.beginPath(); ctx.arc(P.w*0.15,-P.h*0.16+6.5,3.6,0,TAU); ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,0.9)';
+  ctx.beginPath(); ctx.arc(P.w*0.15+1,-P.h*0.16+5,1.3,0,TAU); ctx.fill();
   noGlow();
-  ctx.fillStyle='rgba(255,255,255,0.85)';
-  ctx.beginPath(); ctx.arc(P.w*0.16,-P.h*0.06,1.5,0,TAU); ctx.fill();
-  // shield pips ring
+  // shield pips etched on the shell's left edge
   for(let i=0;i<G.maxPips;i++){
     const on=i<G.pips;
-    ctx.beginPath();
-    ctx.arc(-P.w*0.34, -P.h*0.5+9+i*11, 2.6, 0, TAU);
-    ctx.fillStyle=on?PAL.amber:'rgba(90,98,150,0.55)';
-    if(on){ glow(PAL.amber,8); } else { noGlow(); }
-    ctx.fill(); noGlow();
+    glow(on?PAL.amber:'transparent',on?9:0);
+    ctx.fillStyle=on?PAL.amber:'rgba(255,255,255,0.28)';
+    ctx.beginPath(); ctx.arc(-P.w*0.30,-P.h*0.30+i*11,2.4,0,TAU); ctx.fill();
+    noGlow();
   }
   ctx.restore();
 
