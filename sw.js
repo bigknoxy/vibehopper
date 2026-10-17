@@ -1,5 +1,5 @@
 /* VibeHop service worker — cache-first, offline-ready */
-const CACHE = 'vibehop-v1';
+const CACHE = 'vibehop-v2';
 const ASSETS = ['./', './index.html', './manifest.json'];
 
 self.addEventListener('install', (event) => {
