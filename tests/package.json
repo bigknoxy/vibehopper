@@ -1,0 +1,14 @@
+{
+  "name": "vibehop-tests",
+  "private": true,
+  "description": "Headless-Chromium verification suite for VibeHop",
+  "scripts": {
+    "smoke": "node smoke.js",
+    "verify": "node verify.js",
+    "verify:live": "node verify-live.js",
+    "crops": "node crops.js"
+  },
+  "dependencies": {
+    "puppeteer": "^25.14.0"
+  }
+}
