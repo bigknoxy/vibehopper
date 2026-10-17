@@ -1,0 +1,21 @@
+{
+  "name": "VibeHop — Lo-Fi Neon Rhythm Runner",
+  "short_name": "VibeHop",
+  "description": "A chill lo-fi neon rhythm runner. Hop, dash through glowing rings, collect prisms. Plays offline.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0d0e1e",
+  "theme_color": "#0d0e1e",
+  "categories": ["games", "entertainment"],
+  "lang": "en",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%230d0e1e'/%3E%3Cstop offset='1' stop-color='%23151a3a'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='512' height='512' fill='url(%23g)'/%3E%3Cg fill='none' stroke-linecap='round'%3E%3Cpath d='M96 330 Q 170 235 232 300 T 416 285' stroke='%234ef0d0' stroke-width='22'/%3E%3Ccircle cx='256' cy='228' r='46' fill='%23ff5376'/%3E%3Ccircle cx='256' cy='228' r='74' stroke='%23ffd166' stroke-width='10' opacity='0.85'/%3E%3C/g%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

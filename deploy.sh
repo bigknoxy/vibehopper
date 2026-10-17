@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+# =============================================================================
+#  VibeHop — one-shot GitHub Pages deployment
+#  Idempotent: safe to run repeatedly. Creates the repo, pushes main,
+#  enables GitHub Pages via the API, prints the live URL, and starts a
+#  local preview server.
+#
+#  Requires: git, python3, and the GitHub CLI authenticated (`gh auth login`)
+# =============================================================================
+set -euo pipefail
+
+REPO_NAME="${REPO_NAME:-vibehopper}"
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$PROJECT_DIR"
+
+log()  { printf '\033[1;36m▸ %s\033[0m\n' "$*"; }
+ok()   { printf '\033[1;32m✔ %s\033[0m\n' "$*"; }
+warn() { printf '\033[1;33m! %s\033[0m\n' "$*"; }
+
+# ---------------------------------------------------------------- preflight --
+command -v git   >/dev/null || { echo "git is required";   exit 1; }
+command -v gh    >/dev/null || { echo "GitHub CLI is required: https://cli.github.com/"; exit 1; }
+gh auth status   >/dev/null 2>&1 || { echo "Not logged in. Run: gh auth login"; exit 1; }
+OWNER="$(gh api user -q .login)"
+ok "Authenticated as $OWNER"
+
+# ------------------------------------------------------------------- git init --
+if [ ! -d .git ]; then
+  log "Initializing git repository (branch: main)"
+  git init -q -b main
+fi
+git add -A
+if git diff --cached --quiet; then
+  warn "Nothing new to commit"
+else
+  git commit -q -m "VibeHop: lo-fi neon rhythm runner PWA"
+  ok "Committed"
+fi
+git branch -M main
+
+# ------------------------------------------------------------------ repo + push --
+if gh repo view "$OWNER/$REPO_NAME" >/dev/null 2>&1; then
+  warn "Repository $OWNER/$REPO_NAME already exists — pushing instead"
+  git remote get-url origin >/dev/null 2>&1 || git remote add origin "https://github.com/$OWNER/$REPO_NAME.git"
+  git push -u origin main
+else
+  log "Creating public repository $OWNER/$REPO_NAME"
+  gh repo create "$REPO_NAME" --public --source=. --remote=origin --push
+fi
+ok "Code pushed to https://github.com/$OWNER/$REPO_NAME"
+
+# ------------------------------------------------------------ enable gh-pages --
+log "Enabling GitHub Pages (branch: main, path: /)"
+if gh api "/repos/$OWNER/$REPO_NAME/pages" >/dev/null 2>&1; then
+  warn "Pages already enabled — updating source"
+  gh api --method PUT -H "Accept: application/vnd.github+json" \
+    "/repos/$OWNER/$REPO_NAME/pages" \
+    -f source='{"branch":"main","path":"/"}' >/dev/null || true
+else
+  gh api --method POST -H "Accept: application/vnd.github+json" \
+    "/repos/$OWNER/$REPO_NAME/pages" \
+    -f source='{"branch":"main","path":"/"}' >/dev/null
+fi
+LIVE_URL="https://$OWNER.github.io/$REPO_NAME/"
+ok "Live URL: $LIVE_URL"
+
+# --------------------------------------------------------- local preview serve --
+PORT="${PORT:-8080}"
+if command -v python3 >/dev/null; then
+  if lsof -i ":$PORT" >/dev/null 2>&1 || ss -ltn 2>/dev/null | grep -q ":$PORT "; then
+    warn "Port $PORT is busy — using 8081"
+    PORT=8081
+  fi
+  log "Starting local preview on http://localhost:$PORT"
+  (python3 -m http.server "$PORT" >/dev/null 2>&1 &)
+  sleep 1
+  ok "Local preview: http://localhost:$PORT"
+fi
+
+cat <<EOF
+
+────────────────────────────────────────────────────────
+  VibeHop is live
+  · Remote : $LIVE_URL          (Pages build takes ~60s on first run)
+  · Local  : http://localhost:$PORT
+  · Repo   : https://github.com/$OWNER/$REPO_NAME
+
+  Install as an app: open the URL, then
+   · Android/Desktop → "📲 Install App" button in-game
+   · iOS Safari      → Share ⎋ → Add to Home Screen ＋
+────────────────────────────────────────────────────────
+EOF
+
+# Poll until the Pages build is actually serving
+log "Waiting for the Pages build to go live…"
+for i in $(seq 1 30); do
+  CODE="$(curl -s -o /dev/null -w '%{http_code}' "$LIVE_URL" || true)"
+  if [ "$CODE" = "200" ]; then ok "Pages build ready — $LIVE_URL"; break; fi
+  [ "$i" = "30" ] && warn "Still building (HTTP $CODE) — check $LIVE_URL shortly"
+  sleep 10
+done
